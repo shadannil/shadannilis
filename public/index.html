@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Canciones de Romeo Santos</title>
+    <title>Canciones de Romeo Santos.</title>
     <script>
       /* invoca a registraServiceWorker instalar la aplicación en el caché del
        * navegador. No se espera a que termine el registro. */
@@ -67,6 +67,7 @@
     <script src="/__/firebase/7.14.6/firebase-storage.js"></script>
     <!-- Carga la configuración de tu proyecto en el servidor de Firebase. -->
     <script src="/__/firebase/init.js"></script>
+  </head>
   <body>
     <h1>Ejemplo de PWA</h1>
     <p>
@@ -85,5 +86,117 @@
         muestraError(e);
       }
     </script>
+    	<form action="javascript:guarda()">
+        <header>
+          <button id="agregar" type="button"
+           onclick="alta();">Agregar...</button>
+          <button type="submit">Guardar</button>
+          <button id="eliminar" type="button"
+            onclick="elimina();">Eliminar</button>
+          <h1>Canciones RS</h1>
+        </header>
+        <p><input id="nombre" type="text" placeholder="Nombre" required></p>
+        <ul id="lista">
+          <li><progress max="100">Cargando…</progress></li>
+        </ul>
+        <mi-footer></mi-footer>
+      </form>
+      <script>
+        let id = "";
+        const firestore = firebase.firestore();
+        muestraLista();
+        alta();
+        function muestraLista() {
+          
+          firestore.collection("CANCIONES").orderBy("PAS_NOMBRE").onSnapshot(
+            documentos => {
+              let inner = "";
+              documentos.forEach(doc =>
+                inner += /* html */
+                `<li>
+                  <button type=button onclick="muestra('${cod(doc.id)}')">
+                    ${cod(doc.data().PAS_NOMBRE)}
+                  </button>
+                </li>`);
+              lista.innerHTML = inner;
+            },
+            e => {
+              procesaError(e);
+              muestraLista();
+            }
+          );
+        }
+        
+        function alta() {
+          agregar.disabled = true; 
+          eliminar.disabled = true;
+          id = ""; 
+          nombre.value = ""; 
+        }
+       
+        async function muestra(idSel) {
+          try {
+            agregar.disabled = false; 
+            eliminar.disabled = false; 
+            
+            let doc = await firestore.collection("CANCIONES").doc(idSel).get();
+            if (doc.exists) {
+              id = doc.id;
+              let data = doc.data();
+              nombre.value = data.PAS_NOMBRE || "";
+            } else {
+              alert("La cancion no está registrada.");
+              alta();
+            }
+          } catch (e) {
+            procesaError(e);
+          }
+        }
+        async function guarda() {
+          try {
+            const modelo = {
+              PAS_NOMBRE: nombre.value.trim()
+            };
+            if (id) {
+              /* Modifica el modelo en la base de datos en base al id y espera a
+               * que termine. */
+              await firestore.collection("CANCIONES").doc(id).set(modelo);
+            } else {
+              /* Agrega el modelo a la base de datos, genera automáticamente el
+               * id y espera a que termine. */
+              await firestore.collection("CANCIONES").add(modelo);
+            }
+            alta();
+          } catch (e) {
+            procesaError(e);
+          }
+        }
+        async function elimina() {
+          try {
+            await firestore.collection("CANCIONES").doc(id).delete();
+            alta();
+          } catch (e) {
+            procesaError(e);
+          }
+        }
+        function procesaError(e) {
+          console.log(e);
+          alert(e.message);
+        }
+        function cod(valor) {
+          return (valor || "").toString()
+            .replace(/[<>"']/g,
+              /** @param {string} letra */
+              letra => {
+                switch (letra) {
+                  case "<": return "&lt;";
+                  case ">": return "&gt;";
+                  case '"': return "&quot;";
+                  case "'": return "&#039;";
+                  default: return letra;
+                }
+              });
+        }
+      </script>
   </body>
 </html>
